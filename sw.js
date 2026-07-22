@@ -1,5 +1,5 @@
 const CACHE = 'msalud-rd-v1';
-const URLS = ['/'];
+const URLS = ['/misalud-rd/', '/misalud-rd/index.html', '/misalud-rd/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
