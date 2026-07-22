@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Mi Salud RD</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="Mi Salud RD">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#0b4f6c;--primary-light:#1a7a9e;--accent:#20b2aa;--bg:#e8edf2;--card:#fff;--text:#1a202c;--gray:#718096;--light:#f8fafc;--danger:#dc2626;--warning:#d97706;--success:#16a34a;--radius:14px}
+body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding-bottom:80px}
+.pages{position:relative;min-height:100vh;min-height:100dvh}
+.page{display:none;padding:14px 14px 18px;animation:fade .25s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:4px 0 12px;padding-top:env(safe-area-inset-top,4px)}
+.hdr h2{font-size:1.1em;color:var(--primary);font-weight:700}
+.hdr .back{text-decoration:none;color:var(--primary);font-size:1.3em;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#eef2f6;cursor:pointer;border:none}
+.hdr .close{color:#a0aec0;font-size:1.2em;text-decoration:none;cursor:pointer;border:none;background:none}
+.card{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card-title{font-weight:600;font-size:.93em}
+.card-sub{color:var(--gray);font-size:.8em;margin-top:2px}
+.mi{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border-radius:var(--radius);margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);text-decoration:none;color:inherit;cursor:pointer}
+.mi-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2em;flex-shrink:0}
+.mi-txt{flex:1}
+.mi-txt strong{display:block;font-size:.9em}
+.mi-txt span{font-size:.78em;color:var(--gray)}
+.mi-arrow{color:#cbd5e0;font-size:1.1em}
+.btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:.9em;font-weight:600;text-align:center;cursor:pointer;text-decoration:none;margin-bottom:8px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-outline{background:var(--card);color:var(--primary);border:1.5px solid var(--primary)}
+.btn-success{background:#d1fae5;color:#065f46}
+.btn-danger{background:#fee2e2;color:var(--danger)}
+.btn-sm{padding:10px;font-size:.85em}
+.btn:disabled{opacity:.5;cursor:default}
+.fs-xs{font-size:.75em;color:var(--gray)}
+.mt-4{margin-top:4px}
+.mt-8{margin-top:8px}
+.mb-8{margin-bottom:8px}
+.text-center{text-align:center}
+.badge{display:block;padding:10px 14px;border-radius:10px;font-size:.8em;line-height:1.4}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-orange{background:#fff7ed;color:#9a3412}
+.badge-red{background:#fee2e2;color:var(--danger)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{padding:8px 14px;border-radius:20px;background:var(--card);border:1.5px solid #e2e8f0;font-size:.82em;font-weight:500;color:#4a5568;cursor:pointer;transition:all .15s}
+.chip.selected{background:var(--primary);border-color:var(--primary);color:#fff}
+.si{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #edf2f7;font-size:.84em}
+.si:last-child{border:none}
+.si .lbl{color:var(--gray)}
+.si .val{font-weight:600}
+.si .val.alt{color:var(--danger)}
+.si .val.ok{color:var(--success)}
+.so{display:flex;align-items:center;gap:14px;padding:16px;background:var(--card);border-radius:var(--radius);margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer}
+.so-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3em;flex-shrink:0}
+.so-txt{flex:1}
+.so-txt strong{display:block;font-size:.9em}
+.so-txt span{font-size:.78em;color:var(--gray)}
+.so-arrow{color:#cbd5e0;font-size:1.1em}
+input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.88em;font-family:inherit;background:var(--card);margin-bottom:8px}
+input:focus,textarea:focus{outline:none;border-color:var(--primary)}
+label{font-size:.82em;font-weight:600;color:#4a5568;display:block;margin-bottom:3px;margin-top:8px}
+label:first-child{margin-top:0}
+.doc-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:var(--radius);margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.doc-icon{font-size:1.5em;flex-shrink:0}
+.doc-info{flex:1}
+.doc-info strong{font-size:.85em;display:block}
+.doc-info span{font-size:.75em;color:var(--gray)}
+.doc-type{font-size:.7em;padding:2px 8px;border-radius:10px;background:#eef2f6;color:var(--gray)}
+.doc-del{background:none;border:none;color:var(--danger);font-size:1.1em;cursor:pointer;padding:4px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray)}
+.empty-state .icon{font-size:2.5em;margin-bottom:10px}
+.empty-state p{font-size:.85em}
+.search-box{display:flex;gap:8px;margin-bottom:10px}
+.search-box input{flex:1;margin-bottom:0}
+.search-box button{padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filter-bar .filt{padding:5px 12px;border-radius:16px;border:1px solid #e2e8f0;background:var(--card);font-size:.75em;cursor:pointer;color:#4a5568}
+.filter-bar .filt.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a202c;color:#fff;padding:12px 24px;border-radius:12px;font-size:.85em;z-index:999;display:none;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:90%;text-align:center}
+.toast.show{display:block;animation:fade .3s ease}
+</style>
+</head>
+<body>
+
+<div class="pages">
+
+<!-- ==================== HOME ==================== -->
+<div id="page-home" class="page active">
+  <div class="hdr"><h2>🏥 Mi Salud RD</h2><button class="back" onclick="ir('perfil')">👤</button></div>
+  <div class="card" style="background:#e6f7f5;border-left:4px solid var(--accent);">
+    <div class="card-title" id="home-saludo">👋 Hola</div>
+    <div class="card-sub" id="home-resumen">Cargando...</div>
+  </div>
+  <div class="mi" onclick="ir('perfil')">
+    <div class="mi-icon" style="background:#dbeafe;">📋</div>
+    <div class="mi-txt"><strong>Perfil médico</strong><span>Alergias, medicinas, contacto</span></div>
+    <div class="mi-arrow">›</div>
+  </div>
+  <div class="mi" onclick="ir('subir')">
+    <div class="mi-icon" style="background:#fef3c7;">📸</div>
+    <div class="mi-txt"><strong>Subir documento</strong><span>Foto, PDF o captura</span></div>
+    <div class="mi-arrow">›</div>
+  </div>
+  <div class="mi" onclick="ir('docs')">
+    <div class="mi-icon" style="background:#d1fae5;">📁</div>
+    <div class="mi-txt"><strong>Mis documentos</strong><span id="home-docs-count">0 estudios guardados</span></div>
+    <div class="mi-arrow">›</div>
+  </div>
+  <div class="mi" onclick="ir('buscar')">
+    <div class="mi-icon" style="background:#ede9fe;">🔍</div>
+    <div class="mi-txt"><strong>Buscar</strong><span>Por palabra clave o fecha</span></div>
+    <div class="mi-arrow">›</div>
+  </div>
+  <div class="mi" onclick="ir('especialidad')">
+    <div class="mi-icon" style="background:#fce7f3;">📤</div>
+    <div class="mi-txt"><strong>Compartir con médico</strong><span>Selecciona especialidad y comparte</span></div>
+    <div class="mi-arrow">›</div>
+  </div>
+  <div class="mi" onclick="ir('emergencia')">
+    <div class="mi-icon" style="background:#fff7ed;">🆘</div>
+    <div class="mi-txt"><strong>Código de emergencia</strong><span>Info vital para primeros auxilios</span></div>
+    <div class="mi-arrow">›</div>
+  </div>
+</div>
+
+<!-- ==================== PERFIL ==================== -->
+<div id="page-perfil" class="page">
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Perfil médico</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="card">
+    <label>Nombre completo</label>
+    <input id="p-nombre" value="José Ricardo Castillo" placeholder="Tu nombre">
+    <label>Tipo de sangre</label>
+    <select id="p-sangre"><option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select>
+    <label>Alergias</label>
+    <input id="p-alergias" value="Penicilina" placeholder="Ej: Penicilina, sulfa, látex">
+    <label>Medicamentos actuales</label>
+    <textarea id="p-meds" rows="2" placeholder="Ej: Losartán 50mg, Metformina 850mg">Losartán 50mg, Metformina 850mg</textarea>
+    <label>Condiciones médicas</label>
+    <textarea id="p-condiciones" rows="2" placeholder="Ej: Hipertensión, Diabetes tipo 2">Hipertensión · Diabetes tipo 2</textarea>
+    <label>Contacto de emergencia</label>
+    <input id="p-contacto" value="Ana Castillo: 809-555-0101" placeholder="Nombre y teléfono">
+    <label>Cédula</label>
+    <input id="p-cedula" value="001-1234567-8" placeholder="000-0000000-0">
+    <button class="btn btn-primary mt-8" onclick="guardarPerfil()">💾 Guardar cambios</button>
+  </div>
+  <div class="badge badge-blue">💡 Esta información se usa para generar resúmenes adaptados a cada especialidad médica.</div>
+</div>
+
+<!-- ==================== SUBIR DOCUMENTO ==================== -->
+<div id="page-subir" class="page">
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Subir documento</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="card">
+    <label>Tipo de estudio</label>
+    <select id="doc-tipo">
+      <option value="analisis">🧪 Análisis de sangre</option>
+      <option value="imagen">🩻 Imagen/Radiografía</option>
+      <option value="ecg">❤️ Electrocardiograma</option>
+      <option value="receta">📝 Receta médica</option>
+      <option value="informe">📄 Informe médico</option>
+      <option value="otro">📎 Otro</option>
+    </select>
+    <label>Nombre del estudio</label>
+    <input id="doc-nombre" placeholder="Ej: Perfil lipídico, Rayos X de tórax">
+    <label>Médico / Institución</label>
+    <input id="doc-medico" placeholder="Ej: Dr. Pérez, Clínica Abreu">
+    <label>Fecha</label>
+    <input id="doc-fecha" type="date">
+    <label>Notas adicionales</label>
+    <textarea id="doc-notas" rows="2" placeholder="Resultados clave, observaciones..."></textarea>
+    <label>Seleccionar archivo (foto o PDF)</label>
+    <input id="doc-file" type="file" accept="image/*,.pdf" style="border:none;padding:8px 0">
+    <div id="doc-preview" style="display:none;margin:8px 0;text-align:center">
+      <img id="doc-preview-img" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #e2e8f0">
+    </div>
+    <button class="btn btn-primary" onclick="subirDocumento()">📤 Guardar documento</button>
+  </div>
+  <div class="badge badge-green">💾 Los archivos se guardan localmente en tu dispositivo. No se suben a ningún servidor.</div>
+</div>
+
+<!-- ==================== DOCUMENTOS ==================== -->
+<div id="page-docs" class="page">
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Mis documentos</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="filter-bar" id="docs-filtros"></div>
+  <div id="docs-lista"></div>
+  <div id="docs-vacio" class="empty-state" style="display:none">
+    <div class="icon">📂</div>
+    <p>Aún no has subido documentos. <br>Ve a <strong onclick="ir('subir')" style="color:var(--primary);cursor:pointer">Subir documento</strong> para empezar.</p>
+  </div>
+</div>
+
+<!-- ==================== BUSCAR ==================== -->
+<div id="page-buscar" class="page">
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Buscar</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="search-box">
+    <input id="buscar-input" placeholder="Buscar por estudio, médico, fecha..." onkeyup="if(event.key==='Enter')buscarDocs()">
+    <button onclick="buscarDocs()">🔍</button>
+  </div>
+  <div id="buscar-recientes">
+    <div class="card-title mb-8">Búsquedas recientes</div>
+    <div id="buscar-historial"></div>
+  </div>
+  <div id="buscar-resultados" style="display:none">
+    <div class="card-title mb-8" id="buscar-titulo">Resultados</div>
+    <div id="buscar-lista"></div>
+  </div>
+  <div id="buscar-vacio" class="empty-state" style="display:none">
+    <div class="icon">🔍</div>
+    <p>No se encontraron resultados</p>
+  </div>
+</div>
+
+<!-- ==================== ESPECIALIDAD ==================== -->
+<div id="page-especialidad" class="page">
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Compartir</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <p style="font-size:.85em;color:var(--gray);margin-bottom:8px">¿Para qué especialidad vas a consultar? Solo mostraremos al médico lo relevante para su área.</p>
+  <div class="chips" id="esp-chips"></div>
+  <button class="btn btn-outline btn-sm mt-8" onclick="ir('resumen-completo')">📋 Ver historial completo</button>
+  <div class="badge badge-blue mt-8">💡 Al elegir una especialidad, la app filtra automáticamente los estudios relevantes.</div>
+</div>
+
+<!-- ==================== RESUMEN ESPECIALIDAD ==================== -->
+<div id="page-resumen" class="page">
+  <div class="hdr"><button class="back" onclick="ir('especialidad')">←</button><h2 id="resumen-titulo">Resumen</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div id="resumen-perfil" class="card" style="background:#e6f7f5"></div>
+  <div id="resumen-docs"></div>
+  <button class="btn btn-success mt-8" onclick="ir('compartir-opciones')">📤 Ir a compartir</button>
+</div>
+
+<!-- ==================== RESUMEN COMPLETO ==================== -->
+<div id="page-resumen-completo" class="page">
+  <div class="hdr"><button class="back" onclick="ir('especialidad')">←</button><h2>Historial completo</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div id="resumen-completo-perfil" class="card" style="background:#e6f7f5"></div>
+  <div id="resumen-completo-docs"></div>
+  <button class="btn btn-success mt-8" onclick="ir('compartir-opciones')">📤 Compartir todo</button>
+</div>
+
+<!-- ==================== COMPARTIR OPCIONES ==================== -->
+<div id="page-compartir-opciones" class="page">
+  <div class="hdr"><button class="back" onclick="ir('especialidad')">←</button><h2>Compartir</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <p style="font-size:.85em;color:var(--gray);margin-bottom:8px">Elige cómo compartir tu información con el médico.</p>
+  <div class="so" onclick="ir('modo-presentacion')">
+    <div class="so-icon" style="background:#dbeafe;">📱</div>
+    <div class="so-txt"><strong>Modo presentación</strong><span>El médico ve en tu pantalla, sin enviar datos</span></div>
+    <div class="so-arrow">›</div>
+  </div>
+  <div class="so" onclick="mostrarToast('📤 Simulando envío por WhatsApp...',2000)">
+    <div class="so-icon" style="background:#d1fae5;">💬</div>
+    <div class="so-txt"><strong>WhatsApp</strong><span>Envía el resumen como PDF por WhatsApp</span></div>
+    <div class="so-arrow">›</div>
+  </div>
+  <div class="so" onclick="ir('compartir-enlace')">
+    <div class="so-icon" style="background:#fef3c7;">🔗</div>
+    <div class="so-txt"><strong>Enlace seguro</strong><span>Genera un link temporal que expira en 7 días</span></div>
+    <div class="so-arrow">›</div>
+  </div>
+</div>
+
+<!-- ==================== MODO PRESENTACION ==================== -->
+<div id="page-modo-presentacion" class="page">
+  <div class="hdr"><button class="back" onclick="ir('compartir-opciones')">←</button><h2>Modo presentación</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="badge badge-orange">🔒 Modo presentación activo — El médico solo ve esta pantalla</div>
+  <div class="card" style="margin-top:8px">
+    <div class="card-title" id="pres-nombre">José Ricardo Castillo</div>
+    <div class="card-sub" id="pres-info">Cargando...</div>
+  </div>
+  <div id="pres-docs"></div>
+  <div class="badge badge-blue mt-8">💡 Para salir del modo presentación, toca el botón de bloqueo.</div>
+  <button class="btn btn-danger btn-sm mt-8" onclick="ir('home')">🔒 Bloquear y salir</button>
+</div>
+
+<!-- ==================== ENLACE SEGURO ==================== -->
+<div id="page-compartir-enlace" class="page">
+  <div class="hdr"><button class="back" onclick="ir('compartir-opciones')">←</button><h2>Enlace seguro</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="card">
+    <div class="card-title">🔗 Tu enlace de acceso seguro</div>
+    <div style="background:#f1f5f9;padding:12px;border-radius:10px;margin:10px 0;word-break:break-all;font-size:.82em;font-family:monospace" id="enlace-url">msalud.app/compartir/a7x3k9m2</div>
+    <div class="si"><span class="lbl">⏰ Expira en</span><span class="val">7 días</span></div>
+    <div class="si"><span class="lbl">👁️ Visto</span><span class="val">0 veces</span></div>
+    <div class="si"><span class="lbl">🔐 Protegido</span><span class="val ok">✓ Cifrado</span></div>
+    <button class="btn btn-danger btn-sm mt-8" onclick="mostrarToast('🔗 Enlace revocado',1500)">🗑️ Revocar enlace</button>
+  </div>
+  <div class="badge badge-blue">💡 Puedes revocar el enlace en cualquier momento. Una vez revocado, el médico ya no podrá acceder.</div>
+</div>
+
+<!-- ==================== EMERGENCIA ==================== -->
+<div id="page-emergencia" class="page">
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Código de emergencia</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="badge badge-orange">🆘 Esta información aparece en la pantalla de bloqueo para emergencias</div>
+  <div id="emergencia-info" class="card" style="margin-top:8px"></div>
+  <button class="btn btn-outline btn-sm" onclick="ir('perfil')">✏️ Editar información de emergencia</button>
+  <button class="btn btn-danger btn-sm" onclick="mostrarToast('🔒 Simulando pantalla bloqueada con info de emergencia',2000)">🔒 Probar en pantalla bloqueada</button>
+  <div class="badge badge-blue mt-8">💡 En caso de accidente, el personal de emergencia puede ver tu información vital incluso desde la pantalla bloqueada.</div>
+</div>
+
+</div><!-- /pages -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============== DATA ==============
+const ESPECIALIDADES = {
+  'cardiologia':{label:'❤️ Cardiología',icon:'❤️',filtros:['colesterol','presión','ecg','corazón','cardio','lípidos']},
+  'neumologia':{label:'🫁 Neumología',icon:'🫁',filtros:['pulmón','respiratorio','tórax','espirometría','oxígeno']},
+  'traumatologia':{label:'🦴 Traumatología',icon:'🦴',filtros:['hueso','fractura','rayos x','articulación','columna']},
+  'gastroenterologia':{label:'🩺 Gastroenterología',icon:'🩺',filtros:['estómago','intestino','colon','digestivo','hígado']},
+  'ginecologia':{label:'👩‍⚕️ Ginecología',icon:'👩‍⚕️',filtros:['ginecología','mamografía','papanicolau','ultrasonido pélvico']},
+  'endocrinologia':{label:'🧬 Endocrinología',icon:'🧬',filtros:['tiroides','glucosa','insulina','hormona','metabólico']},
+  'oftalmologia':{label:'👁️ Oftalmología',icon:'👁️',filtros:['visión','ojo','retina','córnea','glaucoma']},
+  'neurologia':{label:'🧠 Neurología',icon:'🧠',filtros:['cerebro','neurológico','ecg','migraña','convulsión']},
+  'hematologia':{label:'🩸 Hematología',icon:'🩸',filtros:['sangre','hemoglobina','plaquetas','leucocitos','hierro']},
+  'pediatria':{label:'🤱 Pediatría',icon:'🤱',filtros:['pediatría','infantil','vacuna','crecimiento']},
+  'medicina-general':{label:'📋 Medicina general',icon:'📋',filtros:[]}
+};
+
+const TIPOS_DOC = {analisis:'🧪 Análisis',imagen:'🩻 Imagen',ecg:'❤️ ECG',receta:'📝 Receta',informe:'📄 Informe',otro:'📎 Otro'};
+
+let docs = [];
+let perfil = {};
+
+// ============== STORAGE ==============
+function cargarDatos(){
+  try{
+    const d = localStorage.getItem('msalud-docs');
+    docs = d ? JSON.parse(d) : [];
+    const p = localStorage.getItem('msalud-perfil');
+    perfil = p ? JSON.parse(p) : {
+      nombre:'José Ricardo Castillo',
+      sangre:'O+',
+      alergias:'Penicilina',
+      medicamentos:'Losartán 50mg, Metformina 850mg',
+      condiciones:'Hipertensión · Diabetes tipo 2',
+      contacto:'Ana Castillo: 809-555-0101',
+      cedula:'001-1234567-8'
+    };
+  }catch(e){docs=[];perfil={nombre:'José Ricardo Castillo',sangre:'O+',alergias:'Penicilina',medicamentos:'',condiciones:'',contacto:'',cedula:''}}
+}
+
+function guardarDocs(){localStorage.setItem('msalud-docs',JSON.stringify(docs))}
+function guardarPerfilStorage(){localStorage.setItem('msalud-perfil',JSON.stringify(perfil))}
+
+// ============== NAV ==============
+function ir(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById('page-'+id);
+  if(el) el.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='home') actualizarHome();
+  if(id==='docs') renderDocs();
+  if(id==='buscar') renderBuscarHistorial();
+  if(id==='resumen-completo') renderResumenCompleto();
+  if(id==='modo-presentacion') renderPresentacion();
+  if(id==='emergencia') renderEmergencia();
+}
+
+// ============== TOAST ==============
+function mostrarToast(msg,time){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),time||2000);
+}
+
+// ============== PERFIL ==============
+function guardarPerfil(){
+  perfil.nombre = document.getElementById('p-nombre').value;
+  perfil.sangre = document.getElementById('p-sangre').value;
+  perfil.alergias = document.getElementById('p-alergias').value;
+  perfil.medicamentos = document.getElementById('p-meds').value;
+  perfil.condiciones = document.getElementById('p-condiciones').value;
+  perfil.contacto = document.getElementById('p-contacto').value;
+  perfil.cedula = document.getElementById('p-cedula').value;
+  guardarPerfilStorage();
+  mostrarToast('✅ Perfil guardado correctamente',1500);
+  actualizarHome();
+}
+
+function cargarPerfilForm(){
+  if(!perfil) return;
+  document.getElementById('p-nombre').value = perfil.nombre||'';
+  document.getElementById('p-sangre').value = perfil.sangre||'O+';
+  document.getElementById('p-alergias').value = perfil.alergias||'';
+  document.getElementById('p-meds').value = perfil.medicamentos||'';
+  document.getElementById('p-condiciones').value = perfil.condiciones||'';
+  document.getElementById('p-contacto').value = perfil.contacto||'';
+  document.getElementById('p-cedula').value = perfil.cedula||'';
+}
+
+// ============== HOME ==============
+function actualizarHome(){
+  document.getElementById('home-saludo').textContent = '👋 Hola, '+(perfil.nombre||'');
+  const resumen = [
+    perfil.sangre ? '🩸 '+perfil.sangre : '',
+    perfil.alergias ? '⚠️ '+perfil.alergias : '',
+    perfil.medicamentos ? '💊 '+perfil.medicamentos.split(',').slice(0,2).join(',') : ''
+  ].filter(Boolean).join(' · ');
+  document.getElementById('home-resumen').textContent = resumen||'Completa tu perfil médico';
+  document.getElementById('home-docs-count').textContent = docs.length+' estudios guardados';
+}
+
+// ============== DOCUMENTOS ==============
+function subirDocumento(){
+  const tipo = document.getElementById('doc-tipo').value;
+  const nombre = document.getElementById('doc-nombre').value.trim();
+  const medico = document.getElementById('doc-medico').value.trim();
+  const fecha = document.getElementById('doc-fecha').value;
+  const notas = document.getElementById('doc-notas').value.trim();
+  const fileInput = document.getElementById('doc-file');
+  const file = fileInput.files[0];
+
+  if(!nombre){mostrarToast('⚠️ Escribe un nombre para el estudio',1500);return}
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:file?file.name:null,data:file?e.target.result:null};
+    docs.push(doc);
+    guardarDocs();
+    document.getElementById('doc-nombre').value='';
+    document.getElementById('doc-medico').value='';
+    document.getElementById('doc-fecha').value='';
+    document.getElementById('doc-notas').value='';
+    document.getElementById('doc-file').value='';
+    document.getElementById('doc-preview').style.display='none';
+    mostrarToast('✅ "'+nombre+'" guardado',1500);
+    actualizarHome();
+  };
+  if(file){reader.readAsDataURL(file)}
+  else{
+    const doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:null,data:null};
+    docs.push(doc);
+    guardarDocs();
+    document.getElementById('doc-nombre').value='';
+    document.getElementById('doc-medico').value='';
+    document.getElementById('doc-fecha').value='';
+    document.getElementById('doc-notas').value='';
+    mostrarToast('✅ "'+nombre+'" guardado',1500);
+    actualizarHome();
+  }
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('doc-file').addEventListener('change',function(){
+    const preview = document.getElementById('doc-preview');
+    const img = document.getElementById('doc-preview-img');
+    if(this.files&&this.files[0]){
+      const reader = new FileReader();
+      reader.onload=function(e){img.src=e.target.result;preview.style.display='block'};
+      reader.readAsDataURL(this.files[0]);
+    } else preview.style.display='none';
+  });
+});
+
+function renderDocs(filtro){
+  const cont = document.getElementById('docs-lista');
+  const vacio = document.getElementById('docs-vacio');
+  const filtros = document.getElementById('docs-filtros');
+  let tipos = [...new Set(docs.map(d=>d.tipo))];
+  let fhtml = '<span class="filt'+(filtro?'':' sel')+'" onclick="renderDocs()">📋 Todos ('+docs.length+')</span>';
+  tipos.forEach(t=>{
+    let cnt = docs.filter(d=>d.tipo===t).length;
+    fhtml += '<span class="filt'+(filtro===t?' sel':'')+'" onclick="renderDocs(\''+t+'\')">'+TIPOS_DOC[t]+' ('+cnt+')</span>';
+  });
+  filtros.innerHTML = fhtml;
+  let lista = filtro ? docs.filter(d=>d.tipo===filtro) : docs;
+  lista.sort((a,b)=>b.id-a.id);
+  if(lista.length===0){cont.innerHTML='';vacio.style.display='block';return}
+  vacio.style.display='none';
+  cont.innerHTML = lista.map(d=>{
+    const icono = TIPOS_DOC[d.tipo]||'📎';
+    const fecha = d.fecha ? new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO') : '';
+    return '<div class="doc-item" onclick="verDocumento('+d.id+')">'+
+      '<div class="doc-icon">'+icono.split(' ')[0]+'</div>'+
+      '<div class="doc-info"><strong>'+d.nombre+'</strong><span>'+fecha+' · '+d.medico+'</span></div>'+
+      '<span class="doc-type">'+icono.split(' ').slice(1).join(' ')+'</span>'+
+      '<button class="doc-del" onclick="event.stopPropagation();eliminarDoc('+d.id+')">✕</button></div>';
+  }).join('');
+}
+
+function eliminarDoc(id){
+  if(!confirm('¿Eliminar este documento?')) return;
+  docs = docs.filter(d=>d.id!==id);
+  guardarDocs();
+  renderDocs();
+  actualizarHome();
+  mostrarToast('🗑️ Documento eliminado',1000);
+}
+
+function verDocumento(id){
+  const d = docs.find(x=>x.id===id);
+  if(!d) return;
+  let info = '📄 <strong>'+d.nombre+'</strong><br>'+
+    '📅 '+new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO')+'<br>'+
+    '🏥 '+d.medico+'<br>'+
+    '📂 '+TIPOS_DOC[d.tipo];
+  if(d.notas) info += '<br>📝 '+d.notas;
+  mostrarToast(info,3000);
+}
+
+// ============== BUSCAR ==============
+function buscarDocs(){
+  const q = document.getElementById('buscar-input').value.trim().toLowerCase();
+  if(!q) return;
+  let hist = JSON.parse(localStorage.getItem('msalud-busquedas')||'[]');
+  hist = [q,...hist.filter(h=>h!==q)].slice(0,5);
+  localStorage.setItem('msalud-busquedas',JSON.stringify(hist));
+  const results = docs.filter(d=>
+    d.nombre.toLowerCase().includes(q)||
+    d.medico.toLowerCase().includes(q)||
+    (d.notas&&d.notas.toLowerCase().includes(q))||
+    d.fecha.includes(q)||
+    TIPOS_DOC[d.tipo].toLowerCase().includes(q)
+  );
+  document.getElementById('buscar-recientes').style.display='none';
+  document.getElementById('buscar-resultados').style.display='block';
+  document.getElementById('buscar-titulo').textContent = '🔍 "'+q+'" — '+results.length+' resultados';
+  const lista = document.getElementById('buscar-lista');
+  if(results.length===0){document.getElementById('buscar-vacio').style.display='block';lista.innerHTML=''}
+  else{
+    document.getElementById('buscar-vacio').style.display='none';
+    lista.innerHTML = results.map(d=>{
+      const icono = TIPOS_DOC[d.tipo]||'📎';
+      const fecha = d.fecha ? new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO') : '';
+      return '<div class="doc-item" onclick="verDocumento('+d.id+')">'+
+        '<div class="doc-icon">'+icono.split(' ')[0]+'</div>'+
+        '<div class="doc-info"><strong>'+d.nombre+'</strong><span>'+fecha+' · '+d.medico+'</span></div>'+
+        '<span class="doc-type">'+icono.split(' ').slice(1).join(' ')+'</span></div>';
+    }).join('');
+  }
+}
+
+function renderBuscarHistorial(){
+  document.getElementById('buscar-recientes').style.display='block';
+  document.getElementById('buscar-resultados').style.display='none';
+  document.getElementById('buscar-vacio').style.display='none';
+  document.getElementById('buscar-input').value='';
+  const hist = JSON.parse(localStorage.getItem('msalud-busquedas')||'[]');
+  const cont = document.getElementById('buscar-historial');
+  if(hist.length===0) cont.innerHTML = '<div class="card-sub">Aún no has hecho búsquedas</div>';
+  else cont.innerHTML = hist.map(h=>'<div class="mi" style="padding:10px 14px;margin-bottom:4px" onclick="document.getElementById(\'buscar-input\').value=\''+h+'\';buscarDocs()">🔍 <span>'+h+'</span></div>').join('');
+}
+
+// ============== ESPECIALIDAD ==============
+function renderEspecialidades(){
+  const cont = document.getElementById('esp-chips');
+  cont.innerHTML = Object.entries(ESPECIALIDADES).map(([k,v])=>'<span class="chip" data-esp="'+k+'" onclick="seleccionarEspecialidad(\''+k+'\',this)">'+v.label+'</span>').join('');
+}
+
+function seleccionarEspecialidad(esp,el){
+  document.querySelectorAll('#esp-chips .chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  generarResumen(esp);
+}
+
+// ============== RESUMEN ==============
+function generarResumen(esp){
+  const info = ESPECIALIDADES[esp];
+  const filtros = info.filtros;
+  document.getElementById('resumen-titulo').textContent = '📋 Resumen para '+info.label;
+  document.getElementById('resumen-perfil').innerHTML = '<div class="card-title">'+perfil.nombre+'</div><div class="card-sub">'+(perfil.sangre?'🩸 '+perfil.sangre+' · ':'')+(perfil.alergias?'⚠️ '+perfil.alergias:'')+'</div>';
+  let relevantes = [];
+  if(filtros.length>0) relevantes = docs.filter(d=>{const txt=(d.nombre+' '+d.medico+' '+d.notas+' '+TIPOS_DOC[d.tipo]).toLowerCase();return filtros.some(f=>txt.includes(f))});
+  else relevantes = [...docs];
+  const cont = document.getElementById('resumen-docs');
+  if(relevantes.length===0) cont.innerHTML = '<div class="card card-sub" style="text-align:center;padding:20px">No se encontraron estudios relevantes para esta especialidad</div>';
+  else cont.innerHTML = '<div class="card-title mb-8" style="font-size:.85em;color:var(--gray)">📄 '+relevantes.length+' estudios relevantes</div>'+
+    relevantes.map(d=>{const icono=TIPOS_DOC[d.tipo]||'📎';const fecha=d.fecha?new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO'):'';return '<div class="doc-item" style="cursor:default"><div class="doc-icon">'+icono.split(' ')[0]+'</div><div class="doc-info"><strong>'+d.nombre+'</strong><span>'+fecha+' · '+d.medico+'</span></div></div>'}).join('');
+  ir('resumen');
+}
+
+// ============== RESUMEN COMPLETO ==============
+function renderResumenCompleto(){
+  document.getElementById('resumen-completo-perfil').innerHTML = '<div class="card-title">'+perfil.nombre+'</div><div class="card-sub">'+(perfil.sangre?'🩸 '+perfil.sangre+'<br>':'')+(perfil.alergias?'⚠️ Alergias: '+perfil.alergias+'<br>':'')+(perfil.medicamentos?'💊 '+perfil.medicamentos+'<br>':'')+(perfil.condiciones?'❤️ '+perfil.condiciones:'')+'</div>';
+  const cont = document.getElementById('resumen-completo-docs');
+  if(docs.length===0) cont.innerHTML = '<div class="card card-sub" style="text-align:center;padding:20px">No hay documentos guardados</div>';
+  else cont.innerHTML = '<div class="card-title mb-8" style="font-size:.85em;color:var(--gray)">📄 '+docs.length+' estudios en total</div>'+
+    docs.map(d=>{const icono=TIPOS_DOC[d.tipo]||'📎';const fecha=d.fecha?new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO'):'';return '<div class="doc-item" style="cursor:default"><div class="doc-icon">'+icono.split(' ')[0]+'</div><div class="doc-info"><strong>'+d.nombre+'</strong><span>'+fecha+' · '+d.medico+'</span></div></div>'}).join('');
+}
+
+// ============== MODO PRESENTACION ==============
+function renderPresentacion(){
+  document.getElementById('pres-nombre').textContent = perfil.nombre||'Paciente';
+  document.getElementById('pres-info').innerHTML = (perfil.sangre?'🩸 '+perfil.sangre+'<br>':'')+(perfil.alergias?'⚠️ Alergias: '+perfil.alergias+'<br>':'')+(perfil.medicamentos?'💊 '+perfil.medicamentos+'<br>':'')+(perfil.condiciones?'❤️ '+perfil.condiciones:'');
+  const cont = document.getElementById('pres-docs');
+  if(docs.length===0) cont.innerHTML = '<div class="card" style="margin-top:8px;text-align:center;padding:20px;color:var(--gray)">Sin documentos</div>';
+  else cont.innerHTML = docs.slice(-5).reverse().map(d=>{const icono=TIPOS_DOC[d.tipo]||'📎';return '<div class="doc-item" style="cursor:default"><div class="doc-icon">'+icono.split(' ')[0]+'</div><div class="doc-info"><strong>'+d.nombre+'</strong><span>'+d.medico+'</span></div></div>'}).join('');
+}
+
+// ============== EMERGENCIA ==============
+function renderEmergencia(){
+  const cont = document.getElementById('emergencia-info');
+  cont.innerHTML = '<div style="display:flex;gap:16px;align-items:center">'+
+    '<div style="width:100px;height:100px;background:#fff;border:2px solid #e2e8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2em;color:#4a5568;">◼◻◼</div>'+
+    '<div style="flex:1;font-size:.82em;line-height:1.7">'+
+    '🩸 <strong>'+(perfil.sangre||'No registrado')+'</strong><br>'+
+    '⚠️ Alergia: <strong>'+(perfil.alergias||'Ninguna')+'</strong><br>'+
+    '💊 '+(perfil.medicamentos||'Ninguno')+'<br>'+
+    '❤️ '+(perfil.condiciones||'Ninguna')+'<br>'+
+    '📞 '+(perfil.contacto||'No registrado')+
+    '</div></div>';
+}
+
+// ============== INIT ==============
+document.addEventListener('DOMContentLoaded',function(){
+  cargarDatos();
+  cargarPerfilForm();
+  actualizarHome();
+  renderDocs();
+  renderEspecialidades();
+});
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
