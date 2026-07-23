@@ -452,7 +452,7 @@ function subirDocumento(){
   const nombre = document.getElementById('doc-nombre').value.trim();
   const medico = document.getElementById('doc-medico').value.trim();
   const fecha = document.getElementById('doc-fecha').value;
-  const notas = document.getElementById('doc-notas').value.trim();
+  const notas = '';
   const fileInput = document.getElementById('doc-file');
   const file = fileInput.files[0];
   const nombreFinal = nombre || (file ? file.name.replace(/\.[^/.]+$/,'') : 'Documento');
@@ -468,7 +468,6 @@ function subirDocumento(){
     document.getElementById('doc-nombre').value='';
     document.getElementById('doc-medico').value='';
     document.getElementById('doc-fecha').value='';
-    document.getElementById('doc-notas').value='';
     document.getElementById('doc-file').value='';
     document.getElementById('doc-preview').style.display='none';
     document.getElementById('doc-file-info').style.display='none';
