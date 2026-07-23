@@ -159,31 +159,49 @@ label:first-child{margin-top:0}
 
 <!-- ==================== SUBIR DOCUMENTO ==================== -->
 <div id="page-subir" class="page">
-  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Subir documento</h2><button class="close" onclick="ir('home')">✕</button></div>
+  <div class="hdr"><button class="back" onclick="ir('home')">←</button><h2>Subir estudio</h2><button class="close" onclick="ir('home')">✕</button></div>
   <div class="card">
-    <label>Tipo de estudio</label>
-    <select id="doc-tipo">
-      <option value="analisis">🧪 Análisis de sangre</option>
-      <option value="imagen">🩻 Imagen/Radiografía</option>
-      <option value="ecg">❤️ Electrocardiograma</option>
-      <option value="receta">📝 Receta médica</option>
-      <option value="informe">📄 Informe médico</option>
-      <option value="otro">📎 Otro</option>
-    </select>
+    <label style="font-weight:600;display:block;margin-bottom:6px;font-size:.9em">¿Qué tipo de estudio es?</label>
+    <div id="tipo-botones" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">
+      <button class="btn-tipo active" data-tipo="analisis" style="background:#dbeafe;color:#1e40af;border:2px solid #1e40af;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
+        🧪<br>Análisis
+      </button>
+      <button class="btn-tipo" data-tipo="imagen" style="background:#f3e8ff;color:#6b21a8;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
+        🩻<br>Imágenes
+      </button>
+      <button class="btn-tipo" data-tipo="ecg" style="background:#fce7f3;color:#9d174d;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
+        ❤️<br>ECG
+      </button>
+      <button class="btn-tipo" data-tipo="receta" style="background:#fef3c7;color:#92400e;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
+        📝<br>Receta
+      </button>
+      <button class="btn-tipo" data-tipo="informe" style="background:#e0e7ff;color:#3730a3;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
+        📄<br>Informe
+      </button>
+      <button class="btn-tipo" data-tipo="otro" style="background:#f1f5f9;color:#475569;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
+        📎<br>Otro
+      </button>
+    </div>
+    <select id="doc-tipo" style="display:none"><option value="analisis">Análisis</option></select>
     <label>Nombre del estudio</label>
-    <input id="doc-nombre" placeholder="Ej: Perfil lipídico, Rayos X de tórax">
+    <input id="doc-nombre" placeholder="Se genera automático al elegir archivo">
     <label>Médico / Institución</label>
     <input id="doc-medico" placeholder="Ej: Dr. Pérez, Clínica Abreu">
     <label>Fecha</label>
     <input id="doc-fecha" type="date">
-    <label>Notas adicionales</label>
-    <textarea id="doc-notas" rows="2" placeholder="Resultados clave, observaciones..."></textarea>
-    <label>Seleccionar archivo (foto o PDF)</label>
-    <input id="doc-file" type="file" accept="image/*,.pdf" style="border:none;padding:8px 0">
-    <div id="doc-preview" style="display:none;margin:8px 0;text-align:center">
+    <label>Foto o PDF del estudio</label>
+    <div id="doc-file-area" style="border:2px dashed #cbd5e0;border-radius:12px;padding:20px;text-align:center;cursor:pointer;margin-bottom:8px;background:#fafafa">
+      <div style="font-size:2em;margin-bottom:4px">📸</div>
+      <div style="font-size:.85em;color:var(--gray)">Toca aquí para seleccionar foto o PDF</div>
+      <input id="doc-file" type="file" accept="image/*,.pdf" style="display:none">
+    </div>
+    <div id="doc-file-info" style="display:none;background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:.85em">
+      📎 <span id="doc-file-name"></span>
+    </div>
+    <div id="doc-preview" style="display:none;margin:6px 0;text-align:center">
       <img id="doc-preview-img" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #e2e8f0">
     </div>
-    <button class="btn btn-primary" onclick="subirDocumento()">📤 Guardar documento</button>
+    <button class="btn btn-primary" onclick="subirDocumento()" id="btn-guardar" style="font-size:1.05em;padding:14px">📤 Guardar estudio</button>
   </div>
   <div class="badge badge-green">💾 Los archivos se guardan localmente en tu dispositivo. No se suben a ningún servidor.</div>
 </div>
@@ -453,6 +471,7 @@ function subirDocumento(){
     document.getElementById('doc-notas').value='';
     document.getElementById('doc-file').value='';
     document.getElementById('doc-preview').style.display='none';
+    document.getElementById('doc-file-info').style.display='none';
     actualizarHome();
     renderDocs();
     mostrarToast('✅ "'+doc.nombre+'" guardado',3000);
@@ -604,14 +623,46 @@ async function clasificarConOCR(doc, txt){
 }
 
 document.addEventListener('DOMContentLoaded',function(){
+  // Botones de tipo de estudio
+  document.querySelectorAll('.btn-tipo').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.btn-tipo').forEach(b=>{
+        b.style.borderColor='#ddd';
+        b.style.opacity='.7';
+      });
+      this.style.borderColor= this.style.borderColor.includes('rgb') ? this.style.borderColor : 
+        (this.dataset.tipo==='analisis'?'#1e40af':this.dataset.tipo==='imagen'?'#6b21a8':this.dataset.tipo==='ecg'?'#9d174d':this.dataset.tipo==='receta'?'#92400e':this.dataset.tipo==='informe'?'#3730a3':'#475569');
+      this.style.opacity='1';
+      document.getElementById('doc-tipo').value = this.dataset.tipo;
+    });
+  });
+  // Click en el área de archivo abre el selector
+  document.getElementById('doc-file-area').addEventListener('click',function(){
+    document.getElementById('doc-file').click();
+  });
   document.getElementById('doc-file').addEventListener('change',function(){
     const preview = document.getElementById('doc-preview');
     const img = document.getElementById('doc-preview-img');
+    const fileInfo = document.getElementById('doc-file-info');
+    const fileName = document.getElementById('doc-file-name');
+    const nombreInput = document.getElementById('doc-nombre');
     if(this.files&&this.files[0]){
-      const reader = new FileReader();
-      reader.onload=function(e){img.src=e.target.result;preview.style.display='block'};
-      reader.readAsDataURL(this.files[0]);
-    } else preview.style.display='none';
+      const f = this.files[0];
+      fileInfo.style.display='block';
+      fileName.textContent = f.name + ' ('+(f.size/1024).toFixed(0)+' KB)';
+      const autoName = f.name.replace(/\.[^/.]+$/,'').replace(/[_-]/g,' ').replace(/\s+/g,' ').trim();
+      if(!nombreInput.value) nombreInput.value = autoName.charAt(0).toUpperCase()+autoName.slice(1);
+      if(f.type.startsWith('image/')){
+        const reader = new FileReader();
+        reader.onload=function(e){img.src=e.target.result;preview.style.display='block'};
+        reader.readAsDataURL(f);
+      } else {
+        preview.style.display='none';
+      }
+    } else {
+      fileInfo.style.display='none';
+      preview.style.display='none';
+    }
   });
 });
 
