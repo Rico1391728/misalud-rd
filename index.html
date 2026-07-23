@@ -81,6 +81,8 @@ label:first-child{margin-top:0}
 .empty-state{text-align:center;padding:40px 20px;color:var(--gray)}
 .empty-state .icon{font-size:2.5em;margin-bottom:10px}
 .empty-state p{font-size:.85em}
+.btn-tipo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px 4px;border-radius:10px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;transition:all .15s}
+.btn-tipo.selected{opacity:1;border-color:var(--primary);background:#eff6ff;color:var(--primary)}
 .search-box{display:flex;gap:8px;margin-bottom:10px}
 .search-box input{flex:1;margin-bottom:0}
 .search-box button{padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer}
@@ -163,24 +165,12 @@ label:first-child{margin-top:0}
   <div class="card">
     <label style="font-weight:600;display:block;margin-bottom:6px;font-size:.9em">¿Qué tipo de estudio es?</label>
     <div id="tipo-botones" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">
-      <button class="btn-tipo active" data-tipo="analisis" style="background:#dbeafe;color:#1e40af;border:2px solid #1e40af;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
-        🧪<br>Análisis
-      </button>
-      <button class="btn-tipo" data-tipo="imagen" style="background:#f3e8ff;color:#6b21a8;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
-        🩻<br>Imágenes
-      </button>
-      <button class="btn-tipo" data-tipo="ecg" style="background:#fce7f3;color:#9d174d;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
-        ❤️<br>ECG
-      </button>
-      <button class="btn-tipo" data-tipo="receta" style="background:#fef3c7;color:#92400e;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
-        📝<br>Receta
-      </button>
-      <button class="btn-tipo" data-tipo="informe" style="background:#e0e7ff;color:#3730a3;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
-        📄<br>Informe
-      </button>
-      <button class="btn-tipo" data-tipo="otro" style="background:#f1f5f9;color:#475569;border:2px solid #ddd;border-radius:10px;padding:10px 4px;font-size:.78em;text-align:center;cursor:pointer;font-weight:600;line-height:1.2">
-        📎<br>Otro
-      </button>
+      <button class="btn-tipo selected" data-tipo="analisis">🧪<br>Análisis</button>
+      <button class="btn-tipo" data-tipo="imagen">🩻<br>Imágenes</button>
+      <button class="btn-tipo" data-tipo="ecg">❤️<br>ECG</button>
+      <button class="btn-tipo" data-tipo="receta">📝<br>Receta</button>
+      <button class="btn-tipo" data-tipo="informe">📄<br>Informe</button>
+      <button class="btn-tipo" data-tipo="otro">📎<br>Otro</button>
     </div>
     <select id="doc-tipo" style="display:none"><option value="analisis">Análisis</option></select>
     <label>Nombre del estudio</label>
@@ -625,13 +615,8 @@ document.addEventListener('DOMContentLoaded',function(){
   // Botones de tipo de estudio
   document.querySelectorAll('.btn-tipo').forEach(btn=>{
     btn.addEventListener('click',function(){
-      document.querySelectorAll('.btn-tipo').forEach(b=>{
-        b.style.borderColor='#ddd';
-        b.style.opacity='.7';
-      });
-      this.style.borderColor= this.style.borderColor.includes('rgb') ? this.style.borderColor : 
-        (this.dataset.tipo==='analisis'?'#1e40af':this.dataset.tipo==='imagen'?'#6b21a8':this.dataset.tipo==='ecg'?'#9d174d':this.dataset.tipo==='receta'?'#92400e':this.dataset.tipo==='informe'?'#3730a3':'#475569');
-      this.style.opacity='1';
+      document.querySelectorAll('.btn-tipo').forEach(b=>b.classList.remove('selected'));
+      this.classList.add('selected');
       document.getElementById('doc-tipo').value = this.dataset.tipo;
     });
   });
