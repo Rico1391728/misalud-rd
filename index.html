@@ -447,17 +447,20 @@ function subirDocumento(){
     let doc = {id:Date.now(),tipo,nombre:nombreFinal,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:file?file.name:null,data:file?e.target.result:null,ocrText:''};
     docs.push(doc);
     guardarDocs();
+    document.getElementById('doc-nombre').value='';
+    document.getElementById('doc-medico').value='';
+    document.getElementById('doc-fecha').value='';
+    document.getElementById('doc-notas').value='';
+    document.getElementById('doc-file').value='';
+    document.getElementById('doc-preview').style.display='none';
     actualizarHome();
     renderDocs();
-    mostrarToast('✅ "'+doc.nombre+'" guardado',1500);
+    mostrarToast('✅ "'+doc.nombre+'" guardado',3000);
 
     // Ahora, en SEGUNDO PLANO, intentar OCR para clasificar automáticamente
     if(file && (file.type.startsWith('image/') || file.type === 'application/pdf')){
-      try{
-        await procesarOCRAsync(doc);
-      }catch(e){
-        // El OCR falló, pero el documento ya está guardado - no pasa nada
-      }
+      // Fuego y olvido - no esperar a que termine
+      procesarOCRAsync(doc).catch(()=>{});
     }
   };
   if(file){reader.readAsDataURL(file)}
@@ -473,6 +476,8 @@ function subirDocumento(){
 
 // ============== OCR - ANALIZAR EN SEGUNDO PLANO ==============
 async function procesarOCRAsync(doc){
+  // Esperar un poco para que primero se vea el toast de "guardado"
+  await new Promise(r => setTimeout(r, 1800));
   mostrarToast('🔍 Analizando imagen para clasificar...',0);
   const idx = docs.findIndex(d => d.id === doc.id);
   if(idx === -1) return;
@@ -521,7 +526,7 @@ async function clasificarConOCR(doc, txt){
     doc.tipo = 'receta';
     doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como receta médica';
   }
-  else if(/\b(radiograf[íi]a|rayos?\s*x|resonancia|tomograf[íi]a|ecograf[íi]a|ultrasonido|mamograf[íi]a|electrocardiograma|ecg\b|ekg\b|densitometr[íi]a|endoscop[íi]a|colonoscop[íi]a|ecocardiograma|electromiograma|espirometr[íi]a|doppler|angiograf[íi]a|gammagraf[íi]a|pet\s*scan)\b/.test(txt)){
+  else if(/\b(radiograf[íi]a|rayos?\s*x|resonancia|tomograf[íi]a|ecograf[íi]a|sonograf[íi]a|ultrasonido|mamograf[íi]a|electrocardiograma|ecg\b|ekg\b|densitometr[íi]a|endoscop[íi]a|colonoscop[íi]a|ecocardiograma|electromiograma|espirometr[íi]a|doppler|angiograf[íi]a|gammagraf[íi]a|pet\s*scan)\b/.test(txt)){
     doc.tipo = 'imagen';
     doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como estudio de imágenes';
   }
@@ -550,7 +555,7 @@ async function clasificarConOCR(doc, txt){
     {patron:/\b(radiograf[íi]a)\b/, nombre:'Radiografía'},
     {patron:/\b(resonancia\s*magn[ée]tica)\b/, nombre:'Resonancia magnética'},
     {patron:/\b(tomograf[íi]a)\b/, nombre:'Tomografía'},
-    {patron:/\b(ecograf[íi]a|ultrasonido)\b/, nombre:'Ecografía / Ultrasonido'},
+    {patron:/\b(ecograf[íi]a|sonograf[íi]a|ultrasonido|eco|eje)\b/, nombre:'Ecografía / Ultrasonido'},
     {patron:/\b(mamograf[íi]a)\b/, nombre:'Mamografía'},
     {patron:/\b(perfil\s*tiroideo|tsh|t4|tiroides)\b/, nombre:'Perfil tiroideo'},
     {patron:/\b(prueba\s*de\s*orina|uroan[áa]lisis|examen\s*de\s*orina|orina)\b/, nombre:'Análisis de orina'},
@@ -562,7 +567,16 @@ async function clasificarConOCR(doc, txt){
     {patron:/\b(electrocardiograma|ecg|ekg)\b/, nombre:'Electrocardiograma'},
     {patron:/\b(informe|epicrisis|resumen\s*alta)\b/, nombre:'Informe médico'},
     {patron:/\b(patolog[íi]a|biopsia)\b/, nombre:'Resultado de biopsia'},
+    {patron:/\b(espirometr[íi]a|prueba\s*pulmonar)\b/, nombre:'Espirometría'},
+    {patron:/\b(doppler|venoso|arterial)\b/, nombre:'Doppler vascular'},
+    {patron:/\b(colonoscop[íi]a|endoscop[íi]a)\b/, nombre:'Endoscopía / Colonoscopía'},
+    {patron:/\b(ecocardiograma|eco\s*cardio)\b/, nombre:'Ecocardiograma'},
+    {patron:/\b(estudio|examen|resultado)\b/, nombre:'Estudio médico'},
   ];
+  // Si no encontró nada específico, usar el nombre del archivo
+  if(!doc.nombre || doc.nombre === 'Documento'){
+    doc.nombre = 'Estudio médico';
+  }
   
   for(let p of palabrasClave){
     if(p.patron.test(txt)){
