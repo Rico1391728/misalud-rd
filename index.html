@@ -437,63 +437,51 @@ function subirDocumento(){
   const notas = document.getElementById('doc-notas').value.trim();
   const fileInput = document.getElementById('doc-file');
   const file = fileInput.files[0];
+  const nombreFinal = nombre || (file ? file.name.replace(/\.[^/.]+$/,'') : 'Documento');
+
+  if(!file && !nombre){mostrarToast('⚠️ Escribe un nombre o selecciona un archivo',1500);return}
 
   const reader = new FileReader();
   reader.onload = async function(e){
-    let doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:file?file.name:null,data:file?e.target.result:null};
-
-    // Intentar OCR automático si trae un archivo (imagen o PDF) y no puso nombre manual
-    if(file && !nombre){
-      await procesarOCR(e.target.result, file, doc);
-    } else if(file && nombre && file.type.startsWith('image/')){
-      // Puso nombre manual pero igual leer el texto para clasificar
-      try{
-        const res = await Tesseract.recognize(e.target.result, 'spa', {logger:m=>{}});
-        doc.ocrText = res.data.text;
-        const txt = res.data.text.toLowerCase();
-        doc = await clasificarConOCR(doc, txt);
-      }catch(e){}
-    } else if(!nombre){
-      doc.nombre = file ? (file.name.replace(/\.[^/.]+$/,'') || 'Documento') : 'Documento sin nombre';
-    }
-
+    // Crear documento y guardarlo INMEDIATAMENTE
+    let doc = {id:Date.now(),tipo,nombre:nombreFinal,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:file?file.name:null,data:file?e.target.result:null,ocrText:''};
     docs.push(doc);
     guardarDocs();
-    document.getElementById('doc-nombre').value='';
-    document.getElementById('doc-medico').value='';
-    document.getElementById('doc-fecha').value='';
-    document.getElementById('doc-notas').value='';
-    document.getElementById('doc-file').value='';
-    document.getElementById('doc-preview').style.display='none';
-    mostrarToast('✅ "'+doc.nombre+'" guardado',1500);
     actualizarHome();
     renderDocs();
+    mostrarToast('✅ "'+doc.nombre+'" guardado',1500);
+
+    // Ahora, en SEGUNDO PLANO, intentar OCR para clasificar automáticamente
+    if(file && (file.type.startsWith('image/') || file.type === 'application/pdf')){
+      try{
+        await procesarOCRAsync(doc);
+      }catch(e){
+        // El OCR falló, pero el documento ya está guardado - no pasa nada
+      }
+    }
   };
   if(file){reader.readAsDataURL(file)}
   else{
-    if(!nombre){mostrarToast('⚠️ Escribe un nombre para el estudio',1500);return}
-    const doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:null,data:null};
+    let doc = {id:Date.now(),tipo,nombre:nombreFinal,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:null,data:null,ocrText:''};
     docs.push(doc);
     guardarDocs();
-    document.getElementById('doc-nombre').value='';
-    document.getElementById('doc-medico').value='';
-    document.getElementById('doc-fecha').value='';
-    document.getElementById('doc-notas').value='';
-    mostrarToast('✅ "'+nombre+'" guardado',1500);
     actualizarHome();
     renderDocs();
+    mostrarToast('✅ "'+doc.nombre+'" guardado',1500);
   }
 }
 
-// ============== OCR - PROCESAR IMAGEN O PDF ==============
-async function procesarOCR(dataUrl, file, doc){
-  mostrarToast('🔍 Analizando archivo...',0);
-  try{
-    let imgData = dataUrl;
-    // Si es PDF, convertirlo a imagen primero
-    if(file.type === 'application/pdf'){
-      mostrarToast('📄 Convirtiendo PDF a imagen...',0);
-      const pdf = await pdfjsLib.getDocument(dataUrl).promise;
+// ============== OCR - ANALIZAR EN SEGUNDO PLANO ==============
+async function procesarOCRAsync(doc){
+  mostrarToast('🔍 Analizando imagen para clasificar...',0);
+  const idx = docs.findIndex(d => d.id === doc.id);
+  if(idx === -1) return;
+
+  let imgData = doc.data;
+  // Si es PDF, convertirlo a imagen
+  if(doc.filename && doc.filename.toLowerCase().endsWith('.pdf')){
+    try{
+      const pdf = await pdfjsLib.getDocument(doc.data).promise;
       const page = await pdf.getPage(1);
       const viewport = page.getViewport({scale:2});
       const canvas = document.createElement('canvas');
@@ -502,15 +490,23 @@ async function procesarOCR(dataUrl, file, doc){
       const ctx = canvas.getContext('2d');
       await page.render({canvasContext:ctx, viewport:viewport}).promise;
       imgData = canvas.toDataURL('image/jpeg',0.9);
-    }
+    }catch(e){return}
+  }
+
+  try{
     const res = await Tesseract.recognize(imgData, 'spa', {logger:m=>{}});
     const txt = res.data.text.toLowerCase();
-    doc.ocrText = res.data.text;
-    doc = await clasificarConOCR(doc, txt);
-    mostrarToast('✅ Estudio clasificado automáticamente',1500);
+    const actualizado = await clasificarConOCR(doc, txt);
+    // Actualizar el documento en el array
+    docs[idx].tipo = actualizado.tipo;
+    docs[idx].nombre = actualizado.nombre;
+    docs[idx].notas = actualizado.notas;
+    docs[idx].ocrText = res.data.text;
+    guardarDocs();
+    renderDocs();
+    mostrarToast('✅ "'+docs[idx].nombre+'" clasificado automáticamente',2000);
   }catch(err){
-    doc.nombre = file.name.replace(/\.[^/.]+$/,'') || 'Estudio '+new Date(doc.fecha).toLocaleDateString('es-DO');
-    mostrarToast('⚠️ No se pudo leer el archivo, se usó nombre del archivo',2000);
+    mostrarToast('⚠️ No se pudo clasificar, pero el documento está guardado',2000);
   }
 }
 
@@ -681,13 +677,25 @@ function verDocumento(id){
   document.getElementById('modal-doc').style.display = 'flex';
 }
 async function reanalizarOCR(doc){
-  if(!doc.data || !doc.data.startsWith('data:image')) return;
-  mostrarToast('🔍 Re-analizando imagen...',0);
+  if(!doc.data) return;
+  mostrarToast('🔍 Re-analizando...',0);
   try{
-    const res = await Tesseract.recognize(doc.data, 'spa', {logger:m=>{}});
+    let imgData = doc.data;
+    // Si es PDF, convertirlo a imagen
+    if(doc.data.startsWith('data:application/pdf')){
+      const pdf = await pdfjsLib.getDocument(doc.data).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({scale:2});
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({canvasContext:ctx, viewport:viewport}).promise;
+      imgData = canvas.toDataURL('image/jpeg',0.9);
+    }
+    const res = await Tesseract.recognize(imgData, 'spa', {logger:m=>{}});
     const txt = res.data.text.toLowerCase();
     doc.ocrText = res.data.text;
-    // Re-clasificar
     const actualizado = await clasificarConOCR(doc, txt);
     doc.tipo = actualizado.tipo;
     doc.nombre = actualizado.nombre;
