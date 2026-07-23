@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Mi Salud RD">
 <meta name="mobile-web-app-capable" content="yes">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--primary:#0b4f6c;--primary-light:#1a7a9e;--accent:#20b2aa;--bg:#e8edf2;--card:#fff;--text:#1a202c;--gray:#718096;--light:#f8fafc;--danger:#dc2626;--warning:#d97706;--success:#16a34a;--radius:14px}
@@ -312,12 +313,14 @@ label:first-child{margin-top:0}
       <button onclick="cerrarModalDoc()" style="border:none;background:var(--light);border-radius:50%;width:32px;height:32px;font-size:1.1em;cursor:pointer;flex-shrink:0">✕</button>
     </div>
     <div id="modal-doc-info" style="font-size:.85em;line-height:1.6;color:var(--text);margin-bottom:12px"></div>
+    <div id="modal-doc-ocr" style="display:none;margin-bottom:12px;background:#f8fafc;border-radius:10px;padding:12px;font-size:.78em;line-height:1.5;color:#475569;max-height:120px;overflow-y:auto;border:1px solid #e2e8f0"></div>
     <div id="modal-doc-img" style="margin-bottom:12px;display:none">
       <img id="modal-doc-img-src" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;max-height:300px;object-fit:contain" src="" alt="Documento">
     </div>
     <div id="modal-doc-actions" style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="btn-pdf" class="btn btn-sm" style="flex:1;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px;font-size:.85em;cursor:pointer;font-weight:600">📄 Descargar PDF</button>
       <button id="btn-compartir-img" class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border:none;border-radius:10px;padding:10px;font-size:.85em;cursor:pointer;font-weight:600">💬 Compartir imagen</button>
+      <button id="btn-reocr" class="btn btn-sm" style="display:none;flex:1;background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:10px;font-size:.85em;cursor:pointer;font-weight:600">🔄 Re-analizar</button>
     </div>
   </div>
 </div>
@@ -433,11 +436,35 @@ function subirDocumento(){
   const fileInput = document.getElementById('doc-file');
   const file = fileInput.files[0];
 
-  if(!nombre){mostrarToast('⚠️ Escribe un nombre para el estudio',1500);return}
-
   const reader = new FileReader();
-  reader.onload = function(e){
-    const doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:file?file.name:null,data:file?e.target.result:null};
+  reader.onload = async function(e){
+    let doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:file?file.name:null,data:file?e.target.result:null};
+
+    // Si tiene imagen y no escribió nombre manualmente, intentar OCR
+    if(file && file.type.startsWith('image/') && !nombre){
+      mostrarToast('🔍 Analizando imagen...',0);
+      try{
+        const res = await Tesseract.recognize(e.target.result, 'spa', {logger:m=>{}});
+        const txt = res.data.text.toLowerCase();
+        doc.ocrText = res.data.text;
+        doc = await clasificarConOCR(doc, txt);
+        mostrarToast('✅ Estudio clasificado automáticamente',1500);
+      }catch(err){
+        doc.nombre = file.name.replace(/\.[^/.]+$/,'') || 'Estudio '+new Date(doc.fecha).toLocaleDateString('es-DO');
+        mostrarToast('⚠️ No se pudo leer la imagen, se usó nombre del archivo',2000);
+      }
+    } else if(file && file.type.startsWith('image/') && nombre){
+      // Si puso nombre manual pero igual queremos leer el texto
+      try{
+        const res = await Tesseract.recognize(e.target.result, 'spa', {logger:m=>{}});
+        doc.ocrText = res.data.text;
+        const txt = res.data.text.toLowerCase();
+        doc = await clasificarConOCR(doc, txt);
+      }catch(e){}
+    } else if(!nombre){
+      doc.nombre = file ? (file.name.replace(/\.[^/.]+$/,'') || 'Documento') : 'Documento sin nombre';
+    }
+
     docs.push(doc);
     guardarDocs();
     document.getElementById('doc-nombre').value='';
@@ -446,11 +473,13 @@ function subirDocumento(){
     document.getElementById('doc-notas').value='';
     document.getElementById('doc-file').value='';
     document.getElementById('doc-preview').style.display='none';
-    mostrarToast('✅ "'+nombre+'" guardado',1500);
+    mostrarToast('✅ "'+doc.nombre+'" guardado',1500);
     actualizarHome();
+    renderDocs();
   };
   if(file){reader.readAsDataURL(file)}
   else{
+    if(!nombre){mostrarToast('⚠️ Escribe un nombre para el estudio',1500);return}
     const doc = {id:Date.now(),tipo,nombre,medico:medico||'No especificado',fecha:fecha||new Date().toISOString().split('T')[0],notas,filename:null,data:null};
     docs.push(doc);
     guardarDocs();
@@ -460,7 +489,87 @@ function subirDocumento(){
     document.getElementById('doc-notas').value='';
     mostrarToast('✅ "'+nombre+'" guardado',1500);
     actualizarHome();
+    renderDocs();
   }
+}
+
+// ============== OCR - CLASIFICACIÓN AUTOMÁTICA ==============
+async function clasificarConOCR(doc, txt){
+  // Detectar tipo de estudio
+  if(/\b(glucosa|colesterol|triglicéridos|hemoglobina|plaquetas|leucocitos|hematocrito|creatinina|urea|ácido úrico|bilirrubina|transaminasas|perfil lipídico|hemograma|glicemia|tsh|t4|t3|ferritina|vitamina\s*d|hierro\s*sérico|examen\s*de\s*sangre|análisis\s*de\s*sangre|prueba\s*de\slaboratorio|resultados\s*de\slaboratorio|química\s*sanguínea)\b/.test(txt)){
+    doc.tipo = 'analisis';
+    doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como análisis de laboratorio';
+  }
+  else if(/\b(receta|tome|dosis|tomar|tableta|cápsula|mg\b|ml\b|jarabe|inyectable|cada\s*\d+\s*horas|por\s*\d+\s*días|firma\s*del\s*médico|indicaciones\s*médicas|posología|prescripción)\b/.test(txt)){
+    doc.tipo = 'receta';
+    doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como receta médica';
+  }
+  else if(/\b(radiograf[íi]a|rayos?\s*x|resonancia|tomograf[íi]a|ecograf[íi]a|ultrasonido|mamograf[íi]a|electrocardiograma|ecg\b|ekg\b|densitometr[íi]a|endoscop[íi]a|colonoscop[íi]a|ecocardiograma|electromiograma|espirometr[íi]a|doppler|angiograf[íi]a|gammagraf[íi]a|pet\s*scan)\b/.test(txt)){
+    doc.tipo = 'imagen';
+    doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como estudio de imágenes';
+  }
+  else if(/\b(informe|reporte\s*médico|epicrisis|resumen\s*de\s*alta|historia\s*clínica|nota\s*de\s*evolución|resultado\s*de\s*biopsia|patolog[íi]a|diagn[óo]stico)\b/.test(txt)){
+    doc.tipo = 'informe';
+    doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como informe médico';
+  }
+  else if(/\b(electrocardiograma|ecg\b|ekg\b|ritmo\s*card[íi]aco|frecuencia\s*card[íi]aca|derivaciones)\b/.test(txt)){
+    doc.tipo = 'ecg';
+    doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 Detectado como ECG';
+  }
+  else {
+    doc.notas = (doc.notas?doc.notas+'\n':'')+'📋 No se pudo clasificar automáticamente';
+  }
+
+  // Extraer nombre descriptivo
+  let nombreAuto = '';
+  const lineas = txt.split('\n').filter(l=>l.trim().length>3).slice(0,5);
+  
+  // Buscar palabras clave para el nombre
+  const palabrasClave = [
+    {patron:/\b(hemograma|biometr[íi]a\s*hem[áa]tica)\b/, nombre:'Hemograma completo'},
+    {patron:/\b(perfil\s*lip[íi]dico|colesterol)\b/, nombre:'Perfil lipídico'},
+    {patron:/\b(glucosa|glicemia)\b/, nombre:'Glicemia / Glucosa'},
+    {patron:/\b(radiograf[íi]a\s*de\s*t[óo]rax|rx\s*t[óo]rax)\b/, nombre:'Radiografía de tórax'},
+    {patron:/\b(radiograf[íi]a)\b/, nombre:'Radiografía'},
+    {patron:/\b(resonancia\s*magn[ée]tica)\b/, nombre:'Resonancia magnética'},
+    {patron:/\b(tomograf[íi]a)\b/, nombre:'Tomografía'},
+    {patron:/\b(ecograf[íi]a|ultrasonido)\b/, nombre:'Ecografía / Ultrasonido'},
+    {patron:/\b(mamograf[íi]a)\b/, nombre:'Mamografía'},
+    {patron:/\b(perfil\s*tiroideo|tsh|t4|tiroides)\b/, nombre:'Perfil tiroideo'},
+    {patron:/\b(prueba\s*de\s*orina|uroan[áa]lisis|examen\s*de\s*orina|orina)\b/, nombre:'Análisis de orina'},
+    {patron:/\b(creatinina|urea|funci[óo]n\s*renal)\b/, nombre:'Función renal'},
+    {patron:/\b(pruebas?\s*hep[áa]ticas|h[íi]gado|transaminasas)\b/, nombre:'Pruebas hepáticas'},
+    {patron:/\b(vitamina\s*d|vit\.?\s*d)\b/, nombre:'Vitamina D'},
+    {patron:/\b(hemoglobina\s*glicosilada|hba1c)\b/, nombre:'Hemoglobina glicosilada (HbA1c)'},
+    {patron:/\b(receta|prescripci[óo]n|medicamento)\b/, nombre:'Receta médica'},
+    {patron:/\b(electrocardiograma|ecg|ekg)\b/, nombre:'Electrocardiograma'},
+    {patron:/\b(informe|epicrisis|resumen\s*alta)\b/, nombre:'Informe médico'},
+    {patron:/\b(patolog[íi]a|biopsia)\b/, nombre:'Resultado de biopsia'},
+  ];
+  
+  for(let p of palabrasClave){
+    if(p.patron.test(txt)){
+      nombreAuto = p.nombre;
+      break;
+    }
+  }
+  
+  if(!nombreAuto){
+    // Si no encontró, usar la línea más descriptiva
+    const significantes = lineas.filter(l=>l.length>10 && l.length<80 && !/\b(nombre|paciente|fecha|doctor|médico|cedula|edad|sexo)\b/i.test(l));
+    if(significantes.length>0) nombreAuto = significantes[0].charAt(0).toUpperCase()+significantes[0].slice(1);
+    else nombreAuto = 'Estudio '+(TIPOS_DOC[doc.tipo]?.split(' ').slice(1).join(' ')||'Médico');
+  }
+
+  doc.nombre = nombreAuto+' - '+new Date(doc.fecha).toLocaleDateString('es-DO');
+
+  // Extraer valores relevantes (opcional - los deja en notas)
+  const valores = txt.match(/\b(glucosa|colesterol\s*total|hdl|ldl|triglicéridos|hemoglobina|hierro|creatinina|tsh)\s*[:=]?\s*\d+[\.\,]?\d*/gi);
+  if(valores && valores.length>0){
+    doc.notas += '\n🔬 Valores detectados: '+valores.slice(0,5).join(', ');
+  }
+
+  return doc;
 }
 
 document.addEventListener('DOMContentLoaded',function(){
@@ -517,25 +626,58 @@ function verDocumento(id){
   let info = '📅 '+new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO')+'<br>'+
     '🏥 '+d.medico+'<br>'+
     '📂 '+TIPOS_DOC[d.tipo];
-  if(d.notas) info += '<br>📝 '+d.notas;
+  if(d.notas) info += '<br>'+d.notas.replace(/\n/g,'<br>');
   document.getElementById('modal-doc-info').innerHTML = info;
   const imgCont = document.getElementById('modal-doc-img');
   const imgEl = document.getElementById('modal-doc-img-src');
+  const ocrCont = document.getElementById('modal-doc-ocr');
   const btnPdf = document.getElementById('btn-pdf');
   const btnImg = document.getElementById('btn-compartir-img');
+  const btnReocr = document.getElementById('btn-reocr');
   if(d.data && d.data.startsWith('data:image')){
     imgEl.src = d.data;
     imgCont.style.display = 'block';
     btnPdf.style.display = 'block';
     btnImg.style.display = 'block';
+    btnReocr.style.display = 'block';
     btnPdf.onclick = function(){descargarPDF(d)};
     btnImg.onclick = function(){compartirImagen(d)};
+    btnReocr.onclick = async function(){await reanalizarOCR(d)};
+    // Mostrar texto extraído si existe
+    if(d.ocrText){
+      ocrCont.textContent = '🔍 '+d.ocrText.substring(0,300)+(d.ocrText.length>300?'...':'');
+      ocrCont.style.display = 'block';
+    } else {
+      ocrCont.style.display = 'none';
+    }
   } else {
     imgCont.style.display = 'none';
     btnPdf.style.display = 'none';
     btnImg.style.display = 'none';
+    btnReocr.style.display = 'none';
+    ocrCont.style.display = 'none';
   }
   document.getElementById('modal-doc').style.display = 'flex';
+}
+async function reanalizarOCR(doc){
+  if(!doc.data || !doc.data.startsWith('data:image')) return;
+  mostrarToast('🔍 Re-analizando imagen...',0);
+  try{
+    const res = await Tesseract.recognize(doc.data, 'spa', {logger:m=>{}});
+    const txt = res.data.text.toLowerCase();
+    doc.ocrText = res.data.text;
+    // Re-clasificar
+    const actualizado = await clasificarConOCR(doc, txt);
+    doc.tipo = actualizado.tipo;
+    doc.nombre = actualizado.nombre;
+    doc.notas = actualizado.notas;
+    guardarDocs();
+    renderDocs();
+    verDocumento(doc.id);
+    mostrarToast('✅ Re-analizado: '+doc.nombre,2000);
+  }catch(e){
+    mostrarToast('⚠️ Error al re-analizar',1500);
+  }
 }
 function cerrarModalDoc(e){
   if(e && e.target!==e.currentTarget) return;
