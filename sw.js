@@ -1,4 +1,4 @@
-const CACHE = 'msalud-rd-v1';
+const CACHE = 'msalud-rd-v3';
 const URLS = ['/misalud-rd/', '/misalud-rd/index.html', '/misalud-rd/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -15,6 +15,12 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/')))
+    fetch(e.request)
+      .then(r => {
+        const clone = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return r;
+      })
+      .catch(() => caches.match(e.request).then(r => r || caches.match('/')))
   );
 });
