@@ -438,7 +438,8 @@ function actualizarHome(){
 
 // ============== DOCUMENTOS ==============
 function subirDocumento(){
-  const tipo = document.getElementById('doc-tipo').value;
+  const tipoInput = document.getElementById('doc-tipo');
+  const tipo = tipoInput ? tipoInput.value : 'otro';
   const nombre = document.getElementById('doc-nombre').value.trim();
   const medico = document.getElementById('doc-medico').value.trim();
   const fecha = document.getElementById('doc-fecha').value;
@@ -691,7 +692,7 @@ function verDocumento(id){
   document.getElementById('modal-doc-titulo').textContent = d.nombre;
   let info = '📅 '+new Date(d.fecha+'T12:00:00').toLocaleDateString('es-DO')+'<br>'+
     '🏥 '+d.medico+'<br>'+
-    '📂 '+TIPOS_DOC[d.tipo];
+    '📂 '+(TIPOS_DOC[d.tipo]||'📎 Desconocido');
   if(d.notas) info += '<br>'+d.notas.replace(/\n/g,'<br>');
   document.getElementById('modal-doc-info').innerHTML = info;
   const imgCont = document.getElementById('modal-doc-img');
